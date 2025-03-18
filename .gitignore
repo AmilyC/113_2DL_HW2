@@ -1,0 +1,6 @@
+/dataset/oxford-iiit-pet/*
+!/dataset/.gitkeep
+/save_models/*
+!/save_models/.gitkeep
+src/models/__pycache__/*
+src/__pycache__/*
