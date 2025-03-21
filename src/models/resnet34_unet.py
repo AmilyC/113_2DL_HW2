@@ -13,6 +13,7 @@ class Encoder(nn.Module):
   
             nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride =1, padding=1),# stride=1,padding=1大小才不會變
             nn.BatchNorm2d(out_channels),
+            nn.Dropout2d(0.5),
         )
         self.right = shortcut
     def forward(self, x):
@@ -32,10 +33,11 @@ class Decoder(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
         self.conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, mid_channels, kernel_size=kernel_size,stride=2),
+            nn.ConvTranspose2d(in_channels, mid_channels, kernel_size=kernel_size,stride=2,padding=1,output_padding=1),
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(out_channels),
+            nn.Dropout2d(0.5),
         )
     def forward(self, x):
         # assert "not implement it yet"
@@ -51,27 +53,23 @@ class ResNet34_UNet(nn.Module):
             nn.Conv2d(3,64,7,2,3,bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(2,2,1) 
+            # nn.MaxPool2d(2,2,1) 
 
         )
         self.down1 = self.make_Encoder_layer(64,64,3)
         self.down2 = self.make_Encoder_layer(64, 128,4, stride=2)
         self.down3 = self.make_Encoder_layer(128, 256,6, stride=2)
         self.down4 = self.make_Encoder_layer(256, 512,3,stride=2)
-        self.down5 =  nn.Sequential(
-            nn.Conv2d(512, 1024, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(1024),
-            nn.ReLU(inplace=True),
-        )
+        self.down5 = self.make_Encoder_layer(512, 1024,3,stride=2)
 
-        self.up1 = nn.ConvTranspose2d(1024, 512,1,stride=1,padding=0) #[4, 512, 9, 9]
-        self.up2 = Decoder(1024,256,kernel_size=2,stride=2,mid_channels=512)
-        self.up3 = Decoder(512,128,kernel_size=2,stride=2,mid_channels=256)
-        self.up4 = Decoder(256,64,kernel_size=2,stride=2,mid_channels=128)
-        self.up5 = Decoder(128,64,kernel_size=2,stride=2)
-        self.up6 = Decoder(64,64,kernel_size=2,stride=2)
+        self.up1 = nn.ConvTranspose2d(1024, 512,2,stride=2,padding=0) 
+        self.up2 = Decoder(1024,256)
+        self.up3 = Decoder(512,128)
+        self.up4 = Decoder(256,64)
+        self.up5 = Decoder(128,64)
+        self.up6 = Decoder(64,64)
 
-        self.out =nn.Conv2d(in_channels=64, out_channels=2, kernel_size=3, stride=1, padding=1)
+        self.out =nn.Conv2d(in_channels=64, out_channels=n_classes, kernel_size=1)
 
         # self.logic = self.outc()
         
@@ -93,63 +91,63 @@ class ResNet34_UNet(nn.Module):
 
     def outc(self, x):
         out = self.out(x)
-        logic = F.interpolate(out, size=(388, 388), mode='bilinear', align_corners=False)
+        logic = F.interpolate(out, size=(512, 512), mode='bilinear', align_corners=False)
         return logic
 
     def forward(self,x):
 
-        print(x.shape)
-        x1 = self.inc(x)#torch.Size([4, 3, 572, 572])
-        print(x1.shape)#torch.Size([4, 64, 143, 143])
+        # print(x.shape)
+        x1 = self.inc(x)#t
+        # print(x1.shape)#
 
-        x2 = self.pooling(x1)
-        print(x2.shape)#torch.Size([4, 64, 71, 71])
+        # x2 = self.pooling(x1)
+        # print(x2.shape)#
 
-        x3 = self.down1(x2)
-        print(x3.shape)#torch.Size([4, 64, 71, 71])
+        x3 = self.down1(x1)
+        # print(x3.shape)#
 
         x4 = self.down2(x3)
-        print(x4.shape)#([4, 128, 36, 36])
+        # print(x4.shape)#
 
         x5 = self.down3(x4)
-        print(x5.shape)#[4, 256, 18, 18]
+        # print(x5.shape)#
 
         x6 = self.down4(x5)
-        print(x6.shape)#[4, 512, 9, 9]
+        # print(x6.shape)#
 
         x7 = self.down5(x6)
-        print(x7.shape) #[4, 1024, 9, 9]
+        # print(x7.shape) #
 
-        x= self.up1(x7)#[4, 512, 9, 9]
-        print(x.shape) 
+        x= self.up1(x7)#
+        # print(x.shape) 
         x= torch.cat([x6,x],dim=1)
-        print(x.shape)#[4, 1024, 9, 9]
+        # print(x.shape)#
 
         x = self.up2(x)
-        print(x.shape)#[4, 256, 18, 18]
+        # print(x.shape)#
 
         x= torch.cat([x5,x],dim=1)
-        print(x.shape)#[4, 512, 18, 18]
+        # print(x.shape)#
 
         x = self.up3(x)
-        print(x.shape)#[4, 128, 36, 36]
+        # print(x.shape)#
         x= torch.cat([x4,x],dim=1)
-        print(x.shape)#[4, 256, 36, 36]
+        # print(x.shape)#
 
         x = self.up4(x)
-        print(x.shape)#[4, 64, 72, 72]
+        # print(x.shape)#
         x = torch.cat([x3,x],dim=1)
-        print(x.shape)#[4, 128, 72, 72]
+        # print(x.shape)#
 
         x = self.up5(x)
-        print(x.shape)#[4, 64, 144, 144]
+        # print(x.shape)#
 
-        x = self.up6(x)#[4, 64, 288, 288]
-        print(x.shape)
+        x = self.up6(x)#
+        # print(x.shape)
 
-        x = self.outc(x)#[4, 2, 388, 388]
-        print(x.shape)
-
+        x = self.outc(x)#
+        # print(x.shape)
+        
 
 
 

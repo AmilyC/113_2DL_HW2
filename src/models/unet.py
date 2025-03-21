@@ -24,13 +24,14 @@ class DoubleConv(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
         self.triple_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=kernel_size, stride=stride, padding=0),
+            nn.Conv2d(in_channels, mid_channels, kernel_size=kernel_size, stride=stride, padding=1),
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(inplace=True),
         
-            nn.Conv2d(mid_channels, mid_channels, kernel_size=kernel_size, stride = stride, padding=0),
+            nn.Conv2d(mid_channels, mid_channels, kernel_size=kernel_size, stride = stride, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
+            nn.Dropout2d(0.5),
             
 
         )
@@ -62,7 +63,7 @@ class UNet(nn.Module):
 
         # self.outfusion = DoubleConv(1, 64)
         self.outc = nn.Conv2d(64, n_classes, kernel_size=3, stride=1, padding=1)
-   
+        self.drop = nn.Dropout2d(0.3)
     
 
     def forward(self, x):
@@ -88,16 +89,18 @@ class UNet(nn.Module):
         
 
         x5 = self.up_conv1(x5)#28X28=>56X56
+        x5 = self.drop(x5)
         # print(x5.shape)
-        x=torch.cat([x5, crop_tensor(x4,x5)], dim=1)
+        x=torch.cat([x5, x4], dim=1)
         # print(x.shape)
         x = self.up1(x) #conv=>
         # print(x.shape)
         
                 
         x = self.up_conv2(x)
+        x = self.drop(x)
         # print(x.shape)
-        x=torch.cat([x, crop_tensor(x3,x)], dim=1)
+        x=torch.cat([x, x3], dim=1)
         # print(x.shape)
         x = self.up2(x)
        
@@ -105,21 +108,25 @@ class UNet(nn.Module):
 
 
         x = self.up_conv3(x)
+        x = self.drop(x)
         # print(x.shape)
-        x=torch.cat([x, crop_tensor(x2,x)], dim=1)
+        x=torch.cat([x, x2], dim=1)
         # print(x.shape)
         x = self.up3(x)
         # print(x.shape)
 
         x = self.up_conv4(x)
+        x = self.drop(x)
         # print(x.shape)
-        x=torch.cat([x, crop_tensor(x1,x)], dim=1)
+        x=torch.cat([x, x1], dim=1)
         # print(x.shape)
         x = self.up4(x)
         # print(x.shape)
   
         logits = self.outc(x)
         # print(logits.shape)
+        #logits = torch.softmax(logits,dim=1)
+        # logits = torch.argmax(logits,dim=1)
         return logits
     
 

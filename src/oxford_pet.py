@@ -37,7 +37,11 @@ class OxfordPetDataset(torch.utils.data.Dataset):
 
         sample = dict(image=image, mask=mask, trimap=trimap)
         if self.transform is not None:
-            sample = self.transform(**sample)
+            augmented = self.transform(image=image, mask=mask,trimap=trimap)
+            image = augmented["image"]
+            mask = augmented["mask"]
+            trimap = augmented["trimap"]
+            # sample = self.transform(**sample)
 
         return sample
 
@@ -81,16 +85,18 @@ class OxfordPetDataset(torch.utils.data.Dataset):
 
 
 class SimpleOxfordPetDataset(OxfordPetDataset):
+    def __init__(self, root, mode="train", transform=None):
+        super().__init__(root, mode, transform)
     def __getitem__(self, *args, **kwargs):
 
         sample = super().__getitem__(*args, **kwargs)
 
         # resize images
-        image = np.array(Image.fromarray(sample["image"]).resize((572, 572), Image.BILINEAR))
+        image = np.array(Image.fromarray(sample["image"]).resize((512, 512), Image.BILINEAR))
         #normalized
         image = image.astype(np.float32) / 255.0 
-        mask = np.array(Image.fromarray(sample["mask"]).resize((388, 388), Image.NEAREST))
-        trimap = np.array(Image.fromarray(sample["trimap"]).resize((572, 572), Image.NEAREST))
+        mask = np.array(Image.fromarray(sample["mask"]).resize((512, 512), Image.NEAREST))
+        trimap = np.array(Image.fromarray(sample["trimap"]).resize((512, 512), Image.NEAREST))
 
         # convert to other format HWC -> CHW
         sample["image"] = np.moveaxis(image, -1, 0)
