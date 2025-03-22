@@ -27,7 +27,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    """(upsample => convolution => ReLU => [BN] => cbam ) * 2"""
+    """(upsample => convolution => ReLU => [BN] ) * 2"""
     def __init__(self, in_channels,out_channels,stride=1,kernel_size=3,mid_channels=None ):
         super(Decoder,self).__init__()
         if not mid_channels:
@@ -96,57 +96,57 @@ class ResNet34_UNet(nn.Module):
 
     def forward(self,x):
 
-        # print(x.shape)
+        print(x.shape)
         x1 = self.inc(x)#t
-        # print(x1.shape)#
+        print(x1.shape)#
 
         # x2 = self.pooling(x1)
         # print(x2.shape)#
 
         x3 = self.down1(x1)
-        # print(x3.shape)#
+        print(x3.shape)#
 
-        x4 = self.down2(x3)
-        # print(x4.shape)#
+        x4 = self.down2(x1)
+        print(x4.shape)#
 
         x5 = self.down3(x4)
-        # print(x5.shape)#
+        print(x5.shape)#
 
         x6 = self.down4(x5)
-        # print(x6.shape)#
+        print(x6.shape)#
 
         x7 = self.down5(x6)
-        # print(x7.shape) #
+        print(x7.shape) #
 
         x= self.up1(x7)#
-        # print(x.shape) 
+        print(x.shape) 
         x= torch.cat([x6,x],dim=1)
-        # print(x.shape)#
+        print(x.shape)#
 
         x = self.up2(x)
-        # print(x.shape)#
+        print(x.shape)#
 
         x= torch.cat([x5,x],dim=1)
-        # print(x.shape)#
+        print(x.shape)#
 
         x = self.up3(x)
-        # print(x.shape)#
+        print(x.shape)#
         x= torch.cat([x4,x],dim=1)
-        # print(x.shape)#
+        print(x.shape)#
 
         x = self.up4(x)
-        # print(x.shape)#
+        print(x.shape)#
         x = torch.cat([x3,x],dim=1)
-        # print(x.shape)#
+        print(x.shape)#
 
         x = self.up5(x)
-        # print(x.shape)#
+        print(x.shape)#
 
         x = self.up6(x)#
-        # print(x.shape)
+        print(x.shape)
 
         x = self.outc(x)#
-        # print(x.shape)
+        print(x.shape)
         
 
 

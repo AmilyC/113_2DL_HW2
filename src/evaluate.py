@@ -1,6 +1,7 @@
 import torch
-device= torch.device("cuda" if (torch.cuda.is_available() ) else "cpu")
+device= torch.device("cuda:1" if (torch.cuda.is_available() ) else "cpu")
 import torch.nn as nn
+
 def evaluate(net, dataloader, criterion):
     # implement the evaluation function here
     net.eval()
@@ -10,17 +11,20 @@ def evaluate(net, dataloader, criterion):
         images =data[1]["image"]
         target = data[1]["mask"]
         # print("Target unique values:", torch.unique(target))
-        target = target.long()  # 轉成整數類別索引
+        
         # print(target.shape)
         images=images.to(device)
-        target = target.to(device)
-        target = torch.argmax(target, dim=1)
+        target = target.to(device).long()
+         # 確保 target 維度正確
+        if target.dim() == 3:
+                target = target.unsqueeze(1)
         with torch.no_grad():
             output = net(images)
             if isinstance(output,dict):
                 output = output['out']
        
-        lossvalue += criterion(output, target)  
+        lossvalue += criterion(output, target)
+        
     lossvalue /= len(dataloader)
     # print("len of data loader:"+str(len(dataloader)))
     return lossvalue
@@ -39,6 +43,7 @@ class DiceLoss(nn.Module):
         # 如果 target 是 (B, H, W)，轉成 (B, 1, H, W)
         if target.dim() == 3:
             target = target.unsqueeze(1)
+           
 
         # 計算 Dice
         intersection = torch.sum(pred * target, dim=(2, 3))

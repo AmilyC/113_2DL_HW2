@@ -5,11 +5,12 @@ from oxford_pet import SimpleOxfordPetDataset
 import torchvision.transforms.functional as TF
 from models.unet import UNet
 from models.resnet34_unet import ResNet34_UNet
-from evaluate import evaluate,ComboLoss
+from evaluate import evaluate,ComboLoss,DiceLoss
 import torchvision.transforms as transforms
 # from torch.utils.tensorboard import SummaryWriter
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+
 
 img_size = 512
 
@@ -29,6 +30,7 @@ def trainmodel(model, dataloader, optimizer, criterion):
         # print(target.shape)
         images=images.to(device)
         target = target.to(device)
+        
         target = target.long()
         target = target.squeeze(1)
         #target = torch.argmax(target, dim=1)
@@ -39,6 +41,7 @@ def trainmodel(model, dataloader, optimizer, criterion):
         if isinstance(output,dict):
             output = output['out']
         loss = criterion(output,target) 
+
         #loss.requires_grad = True
         loss.backward()
         optimizer.step()
@@ -52,12 +55,11 @@ def train(args):
     best_loss = float('inf')
     root=args.data_path
     # mode ="train"
-    milestones = [10,15,20,50, 100, 150, 200]#represents 到eopch 多少的時候就降低lr
+    milestones = [30,50, 100, 150, 200]#represents 到eopch 多少的時候就降低lr
     print(device)
     # 步驟1. data loader處理
     train_transform = A.Compose([
         A.HorizontalFlip(p=0.5),
-        A.VerticalFlip(p=0.5),
         A.Rotate(limit=20, p=0.5),
         A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15, p=0.5),
         A.GaussianBlur(p=0.2),
@@ -88,15 +90,15 @@ def train(args):
     # writer = SummaryWriter() 
 
     # 步驟2. 模型宣告
-    model = UNet(n_channels=3, n_classes=2).to(device)   
+    model = ResNet34_UNet(n_channels=3, n_classes=2).to(device)   
      #第55行改第87行就要改
     # Add on Tensorboard the Model Graph
     # img_reference_dummy = torch.randn(1,3,img_size,img_size)
     # img_test_dummy = torch.randn(1,3,img_size,img_size)
     # writer.add_graph(model,[img_reference_dummy,img_test_dummy])
     # 步驟3. loss function宣告
-    criterion = ComboLoss(0.3).to(device)
-    # criterion = torch.nn.CrossEntropyLoss().to(device)
+    #criterion = ComboLoss(0.7).to(device)
+    criterion = ComboLoss(1).to(device)
     # 步驟4. optimator宣告
     if(args.optimizer=="Adam"):
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-4, lr=args.learning_rate)
@@ -105,9 +107,7 @@ def train(args):
     elif(args.optimizer=="SGD"):
         optimizer = torch.optim.SGD(model.parameters(), weight_decay=1e-4,lr=args.learning_rate)
 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='max',  patience=5, verbose=True
-    )
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
     # 步驟5. 模型開始訓練
     # https://github.com/TommyHuang821/Pytorch_DL_Implement/blob/main/10_pytorch_SemanticSegmentation_VOC2007.ipynb
     
@@ -117,14 +117,14 @@ def train(args):
         # train
         train_loss = trainmodel(model, dataloader_train, optimizer, criterion)
         log_loss_train.append([epoch,train_loss])
-        
+        scheduler.step()
         # eval
         val_loss = evaluate(model, dataloader_val, criterion)
         log_loss_val.append([epoch,val_loss])
         if val_loss <best_loss :
             best_loss = val_loss
-            torch.save(model.state_dict(),'saved_models/Unet0320_1.pth')#第55行改第87行就要改
-        scheduler.step(val_loss)
+            torch.save(model.state_dict(),'saved_models/ResNet34UNet0322_1.pth')#第55行改第87行就要改
+        
         print('\nlearning rate:{}'.format(scheduler.get_last_lr()[0]))
         print('CNN[epoch: [{}/{}], loss(train):{:.5f}'.format(
             epoch+1, args.epochs, train_loss))
@@ -153,6 +153,6 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
     log_loss_train ,log_loss_val=train(args)
-    utils.draw_loss(log_loss_train,log_loss_val,'UNet0320_1.jpg')
+    utils.draw_loss(log_loss_train,log_loss_val,'ResNet34UNet0322_1.jpg')
     
     

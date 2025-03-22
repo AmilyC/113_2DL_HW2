@@ -9,7 +9,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
 def test_evaluate(args):
-    net = UNet(n_channels=3, n_classes=2).to(device)
+    net = ResNet34_UNet(n_channels=3, n_classes=2).to(device)
     net.load_state_dict(torch.load(args.model))
     
     net.eval()
@@ -28,40 +28,18 @@ def test_evaluate(args):
         target = target.long()  # 轉成整數類別索引
         # print(target.shape)
         images=images.to(device)
-        target = target.to(device)
-       
+        target = target.to(device).long()
+        if target.dim() == 3:
+            target = target.unsqueeze(1)
         # target = torch.argmax(target, dim=1)
         
         with torch.no_grad():
             output = net(images)
             if isinstance(output,dict):
                 output = output['out']
-                preds = torch.argmax(output, dim=1)
-           
-            # 顯示前幾個樣本
-    num_samples = min(4, len(images))
-    fig, axs = plt.subplots(num_samples, 3, figsize=(10, num_samples * 3))
-
-    for i in range(num_samples):
-        # 顯示原圖
-        axs[i, 0].imshow(images[i].permute(1, 2, 0).cpu().numpy())
-        axs[i, 0].set_title("Original Image")
-        axs[i, 0].axis('off')
-
-        # 顯示真實標註
-        axs[i, 1].imshow(target[i].cpu().numpy(), cmap='gray')
-        axs[i, 1].set_title("Ground Truth")
-        axs[i, 1].axis('off')
-
-        # 顯示模型預測結果
-        axs[i, 2].imshow(preds[i].cpu().numpy(), cmap='gray')
-        axs[i, 2].set_title("Model Prediction")
-        axs[i, 2].axis('off')
-
-    plt.tight_layout()
-    plt.show()
-        # print("output unique values:", torch.unique(output))
-    lossvalue += dice_score(output, target)  
+            
+ 
+        lossvalue += dice_score(output, target)  
     lossvalue /= len(dataloader_test)
     print("len of data loader:"+str(len(dataloader_test)))
     return lossvalue

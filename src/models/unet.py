@@ -67,64 +67,64 @@ class UNet(nn.Module):
     
 
     def forward(self, x):
-        # print(x.shape)
+        print(x.shape)
         x1 = self.inc(x)
        
-        # print(x1.shape)
+        print(x1.shape)
         x2 = self.pooling(x1)
         x2 = self.down1(x2)
         
-        # print(x2.shape)
+        print(x2.shape)
         x3 = self.pooling(x2)
         x3 = self.down2(x3)
         
-        # print(x3.shape)
+        print(x3.shape)
         x4 = self.pooling(x3)
         x4 = self.down3(x4)
         
-        # print(x4.shape)
+        print(x4.shape)
         x5 = self.pooling(x4)
         x5 = self.down4(x5)
-        # print(x5.shape)
+        print(x5.shape)
         
 
         x5 = self.up_conv1(x5)#28X28=>56X56
         x5 = self.drop(x5)
-        # print(x5.shape)
+        print(x5.shape)
         x=torch.cat([x5, x4], dim=1)
-        # print(x.shape)
+        print(x.shape)
         x = self.up1(x) #conv=>
-        # print(x.shape)
+        print(x.shape)
         
                 
         x = self.up_conv2(x)
         x = self.drop(x)
-        # print(x.shape)
+        print(x.shape)
         x=torch.cat([x, x3], dim=1)
-        # print(x.shape)
+        print(x.shape)
         x = self.up2(x)
        
-        # print(x.shape)
+        print(x.shape)
 
 
         x = self.up_conv3(x)
         x = self.drop(x)
-        # print(x.shape)
+        print(x.shape)
         x=torch.cat([x, x2], dim=1)
-        # print(x.shape)
+        print(x.shape)
         x = self.up3(x)
-        # print(x.shape)
+        print(x.shape)
 
         x = self.up_conv4(x)
         x = self.drop(x)
-        # print(x.shape)
+        print(x.shape)
         x=torch.cat([x, x1], dim=1)
-        # print(x.shape)
+        print(x.shape)
         x = self.up4(x)
-        # print(x.shape)
+        print(x.shape)
   
         logits = self.outc(x)
-        # print(logits.shape)
+        print(logits.shape)
         #logits = torch.softmax(logits,dim=1)
         # logits = torch.argmax(logits,dim=1)
         return logits
