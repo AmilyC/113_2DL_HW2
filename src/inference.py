@@ -18,10 +18,15 @@ def test_evaluate(args):
     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ToTensorV2()
     ])
-    dataset_test = SimpleOxfordPetDataset(args.data_path,"test",val_transform)
+    dataset_test = SimpleOxfordPetDataset(args.data_path,"test",val_transform,preprocess=True)
     dataloader_test   = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,num_workers=4, shuffle=False)
     print(len(dataloader_test))
-    for data in enumerate(dataloader_test):
+    
+    images_list = []
+    masks_list = []
+    predictions_list = []
+    i=0
+    for  data in enumerate(dataloader_test):
         # print(data)
         images =data[1]["image"]
         target = data[1]["mask"]
@@ -38,10 +43,38 @@ def test_evaluate(args):
             if isinstance(output,dict):
                 output = output['out']
             
- 
         lossvalue += dice_score(output, target)  
+        
+        if i < 4:
+            for img_idx in range(4):
+              images_list.append(images[img_idx].cpu().permute(1, 2, 0).numpy())
+              masks_list.append(target[img_idx].cpu().squeeze().numpy())
+              predictions_list.append(torch.argmax(output[img_idx], dim=0).cpu().squeeze().numpy())
+        i+=1
+            
     lossvalue /= len(dataloader_test)
     print("len of data loader:"+str(len(dataloader_test)))
+    
+        # Visualization
+    fig, axes = plt.subplots(4, 3, figsize=(10, 15))
+    for idx in range(4):
+        axes[idx, 0].imshow((images_list[idx]))
+        axes[idx, 0].set_title("Original Image")
+        axes[idx, 1].imshow(masks_list[idx], cmap='gray')
+        axes[idx, 1].set_title("Ground Truth Mask")
+        axes[idx, 2].imshow(predictions_list[idx], cmap='gray')
+        axes[idx, 2].set_title("Predicted Mask")
+
+        for ax in axes[idx]:
+            ax.axis('off')
+
+    plt.tight_layout()
+    plt.savefig("segmentation_visualization_1.png")
+    plt.show()
+    
+    
+    
+    
     return lossvalue
 
 

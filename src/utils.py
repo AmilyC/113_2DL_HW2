@@ -25,10 +25,9 @@ def dice_score(pred_mask, gt_mask):
 
 def draw_loss(train_loss, val_loss, file_name):
    # Extract only the loss values (second value of each [epoch, loss] pair)
-    # If train_loss and val_loss are lists of tensors:
-    train_losses = [x[1].detach().cpu().numpy() if isinstance(x, torch.Tensor) else x for x in train_loss]
-    val_losses = [x[1].detach().cpu().numpy() if isinstance(x, torch.Tensor) else x for x in val_loss]
-
+    train_losses = [x[1].detach().cpu().numpy() if isinstance(x[1], torch.Tensor) else x[1] for x in train_loss]
+    val_losses = [x[1].detach().cpu().numpy() if isinstance(x[1], torch.Tensor) else x[1] for x in val_loss]
+   
     # Plot the losses
     plt.plot(train_losses, label="Training Loss", color='blue')
     plt.plot(val_losses, label="Validation Loss", color='orange')

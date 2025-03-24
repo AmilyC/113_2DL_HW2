@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 # from torch.utils.tensorboard import SummaryWriter
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from tqdm import trange
 
 
 img_size = 512
@@ -77,8 +78,8 @@ def train(args):
     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ToTensorV2()
     ])
-    dataset_train = SimpleOxfordPetDataset(root,"train",train_transform)
-    dataset_val = SimpleOxfordPetDataset(root,"valid",val_transform)
+    dataset_train = SimpleOxfordPetDataset(root,"train",train_transform,preprocess=True)
+    dataset_val = SimpleOxfordPetDataset(root,"valid",val_transform,preprocess=True)
     dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size,num_workers=4, shuffle=True,  pin_memory=True,
     prefetch_factor=2) # 預先讀取資料
     dataloader_val   = torch.utils.data.DataLoader(dataset_val,   batch_size=args.batch_size, num_workers=4,shuffle=False ,pin_memory=True,
@@ -113,7 +114,7 @@ def train(args):
     
     log_loss_train=[]
     log_loss_val=[]
-    for epoch in range(args.epochs):
+    for epoch in trange(args.epochs, desc="Training Progress", unit="epoch"):
         # train
         train_loss = trainmodel(model, dataloader_train, optimizer, criterion)
         log_loss_train.append([epoch,train_loss])
@@ -123,7 +124,7 @@ def train(args):
         log_loss_val.append([epoch,val_loss])
         if val_loss <best_loss :
             best_loss = val_loss
-            torch.save(model.state_dict(),'saved_models/ResNet34UNet0322_1.pth')#第55行改第87行就要改
+            torch.save(model.state_dict(),'saved_models/ResNet34_UNet0324_2.pth')#第55行改第87行就要改
         
         print('\nlearning rate:{}'.format(scheduler.get_last_lr()[0]))
         print('CNN[epoch: [{}/{}], loss(train):{:.5f}'.format(
@@ -153,6 +154,6 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
     log_loss_train ,log_loss_val=train(args)
-    utils.draw_loss(log_loss_train,log_loss_val,'ResNet34UNet0322_1.jpg')
+    utils.draw_loss(log_loss_train,log_loss_val,"train.png")
     
     

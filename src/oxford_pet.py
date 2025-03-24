@@ -8,15 +8,18 @@ from tqdm import tqdm
 from urllib.request import urlretrieve
 
 class OxfordPetDataset(torch.utils.data.Dataset):
-    def __init__(self, root, mode="train", transform=None):
+    def __init__(self, root, mode="train", transform=None,preprocess=False):
 
         assert mode in {"train", "valid", "test"}
 
         self.root = root
         self.mode = mode
         self.transform = transform
-
-        self.images_directory = os.path.join(self.root, "images")
+        if( not preprocess):
+            self.images_directory = os.path.join(self.root, "images")
+        else:
+            self.images_directory = os.path.join(self.root, "preimages")
+            
         self.masks_directory = os.path.join(self.root, "annotations", "trimaps")
 
         self.filenames = self._read_split()  # read train/valid/test splits
@@ -30,9 +33,18 @@ class OxfordPetDataset(torch.utils.data.Dataset):
         image_path = os.path.join(self.images_directory, filename + ".jpg")
         mask_path = os.path.join(self.masks_directory, filename + ".png")
 
-        image = np.array(Image.open(image_path).convert("RGB"))
-
-        trimap = np.array(Image.open(mask_path))
+        try:
+        # try read images
+            image = np.array(Image.open(image_path).convert("RGB"))
+            trimap = np.array(Image.open(mask_path))
+            
+        except Exception as e:
+        # if cannot open images, skip it
+            print(f"cannot read img files: {filename}, error: {e}")
+            with open("skipped_files.txt", "a") as f:
+                f.write(f"{filename}\n")
+            return self.__getitem__((idx + 1) % len(self.filenames))  # 換下一張
+          
         mask = self._preprocess_mask(trimap)
 
         sample = dict(image=image, mask=mask, trimap=trimap)
@@ -85,11 +97,13 @@ class OxfordPetDataset(torch.utils.data.Dataset):
 
 
 class SimpleOxfordPetDataset(OxfordPetDataset):
-    def __init__(self, root, mode="train", transform=None):
-        super().__init__(root, mode, transform)
+    def __init__(self, root, mode="train", transform=None,preprocess=False):
+        super().__init__(root, mode, transform,preprocess)
     def __getitem__(self, *args, **kwargs):
 
         sample = super().__getitem__(*args, **kwargs)
+        
+        #print(sample["image"].shape, sample["image"].dtype)
 
         # resize images
         image = np.array(Image.fromarray(sample["image"]).resize((512, 512), Image.BILINEAR))

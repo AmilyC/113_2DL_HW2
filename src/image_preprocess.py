@@ -1,8 +1,13 @@
 import cv2
 import numpy as np
 import os
+from tqdm import tqdm
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # tolerrate broken images
+
+
 def apply_clahe(image):
-    """ ??????????????????????????????????????? """
+    
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -11,16 +16,31 @@ def apply_clahe(image):
     return cv2.cvtColor(enhanced_img, cv2.COLOR_LAB2BGR)
 
 
-# **????????????**
-D = os.listdir('dataset\oxford-iiit-pet\images')
-out_dir = 'dataset\oxford-iiit-pet\preimages'
+D = 'dataset/oxford-iiit-pet/images'
 
-if not os.path.exists(out_dir):
-    os.makedirs(out_dir)
-for file in D:
-    image = cv2.imread(os.path.join(D,file))
+out_dir = os.path.join('dataset', 'oxford-iiit-pet', 'preimages')
 
-    # **Z-score ?????????**
+os.makedirs(out_dir, exist_ok=True)
+
+
+for file in tqdm(os.listdir(D)) :
+    if not file.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+        print(f"skip not images file: {file}")
+        continue
+
+    image_path = os.path.join(D, file)
+    
+    image = cv2.imread(image_path)
+    
+    if image is None:
+       print(f"skip broken images file: {file}")
+       continue
+       
+      
+    
+    
+
+    # **Z-score **
     normalized_image = np.zeros_like(image, dtype=np.float32)
     for i in range(3):
         channel = image[:, :, i]
@@ -33,23 +53,14 @@ for file in D:
 
     normalized_image = np.clip(normalized_image, 0, 255).astype(np.uint8)
 
-    # **?????????** (??????????????????)
+  
     denoised_image = cv2.bilateralFilter(normalized_image, 5, 25, 25)
 
-    # **?????????????????? (CLAHE)**
+ 
     enhanced_image = apply_clahe(denoised_image)
 
 
-    # **????????????**
-    # cv2.imshow('Original Image', image)
-    # cv2.imshow('Normalize Image',normalized_image)
-    # cv2.imshow('Denoised Image', denoised_image)
-    # cv2.imshow('Enhanced Image (CLAHE)', enhanced_image)
-    # cv2.imshow('hightlight protected:',protected_image)
-    # # cv2.imshow('Sharpened Image (Final)', sharpened_img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+ 
     cv2.imwrite(os.path.join(out_dir,file),enhanced_image)
 
-# **??????????????????**
-# print(f"????????????: {avg_brightness:.2f}, ????????????: {final_weight:.2f}")
+
