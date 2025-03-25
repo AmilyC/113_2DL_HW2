@@ -6,17 +6,6 @@ import torch
 import torch
 import torch.nn as nn
 
-def crop_tensor(enc_feature, dec_feature):
-        """裁剪編碼器特徵圖，讓大小對齊解碼器輸出"""
-        _, _, H_enc, W_enc = enc_feature.shape
-        _, _, H_dec, W_dec = dec_feature.shape
-
-        crop_h = (H_enc - H_dec) // 2
-        crop_w = (W_enc - W_dec) // 2
-
-        return enc_feature[:, :, crop_h: H_enc - crop_h, crop_w: W_enc - crop_w]
-
-
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
     def __init__(self, in_channels, out_channels, stride=1,kernel_size=3, mid_channels=None):
@@ -41,7 +30,7 @@ class DoubleConv(nn.Module):
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes):
-        super(UNet, self).__init__() #是調用父類（nn.Module）的初始化函式，確保我們繼承到的功能都能正常運作。
+        super(UNet, self).__init__() #??????????????????nn.Module???????????????????????????????????????????????????????????????????????????
         self.pooling = nn.MaxPool2d(kernel_size=2)
         self.up_conv1 = nn.ConvTranspose2d(1024, 512, 2,stride=2)
         self.up_conv2 = nn.ConvTranspose2d(512, 256, 2,stride=2)
@@ -67,64 +56,64 @@ class UNet(nn.Module):
     
 
     def forward(self, x):
-        print(x.shape)
+        # print(x.shape)
         x1 = self.inc(x)
        
-        print(x1.shape)
+        # print(x1.shape)
         x2 = self.pooling(x1)
         x2 = self.down1(x2)
         
-        print(x2.shape)
+        # print(x2.shape)
         x3 = self.pooling(x2)
         x3 = self.down2(x3)
         
-        print(x3.shape)
+        # print(x3.shape)
         x4 = self.pooling(x3)
         x4 = self.down3(x4)
         
-        print(x4.shape)
+        # print(x4.shape)
         x5 = self.pooling(x4)
         x5 = self.down4(x5)
-        print(x5.shape)
+        # print(x5.shape)
         
 
         x5 = self.up_conv1(x5)#28X28=>56X56
         x5 = self.drop(x5)
-        print(x5.shape)
+        # print(x5.shape)
         x=torch.cat([x5, x4], dim=1)
-        print(x.shape)
+        # print(x.shape)
         x = self.up1(x) #conv=>
-        print(x.shape)
+        # print(x.shape)
         
                 
         x = self.up_conv2(x)
         x = self.drop(x)
-        print(x.shape)
+        # print(x.shape)
         x=torch.cat([x, x3], dim=1)
-        print(x.shape)
+        # print(x.shape)
         x = self.up2(x)
        
-        print(x.shape)
+        # print(x.shape)
 
 
         x = self.up_conv3(x)
         x = self.drop(x)
-        print(x.shape)
+        # print(x.shape)
         x=torch.cat([x, x2], dim=1)
-        print(x.shape)
+        # print(x.shape)
         x = self.up3(x)
-        print(x.shape)
+        # print(x.shape)
 
         x = self.up_conv4(x)
         x = self.drop(x)
-        print(x.shape)
+        # print(x.shape)
         x=torch.cat([x, x1], dim=1)
-        print(x.shape)
+        # print(x.shape)
         x = self.up4(x)
-        print(x.shape)
+        # print(x.shape)
   
         logits = self.outc(x)
-        print(logits.shape)
+        # print(logits.shape)
         #logits = torch.softmax(logits,dim=1)
         # logits = torch.argmax(logits,dim=1)
         return logits

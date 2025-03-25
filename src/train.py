@@ -5,17 +5,17 @@ from oxford_pet import SimpleOxfordPetDataset
 import torchvision.transforms.functional as TF
 from models.unet import UNet
 from models.resnet34_unet import ResNet34_UNet
-from evaluate import evaluate,ComboLoss,DiceLoss
+from evaluate import evaluate
 import torchvision.transforms as transforms
 # from torch.utils.tensorboard import SummaryWriter
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from tqdm import trange
-
+import os
 
 img_size = 512
 
-device= torch.device("cuda:1" if (torch.cuda.is_available() ) else "cpu")
+device= torch.device("cuda" if (torch.cuda.is_available() ) else "cpu")
 
 
 
@@ -52,13 +52,13 @@ def trainmodel(model, dataloader, optimizer, criterion):
 
 def train(args):
     # implement the training function here
-    #步驟0. 是否使用CUDA
+    #??????0. ????????????CUDA
     best_loss = float('inf')
     root=args.data_path
     # mode ="train"
-    milestones = [30,50, 100, 150, 200]#represents 到eopch 多少的時候就降低lr
+    milestones = [30,50, 100, 150, 200]#represents ???eopch ????????????????????????lr
     print(device)
-    # 步驟1. data loader處理
+    # ??????1. data loader??????
     train_transform = A.Compose([
         A.HorizontalFlip(p=0.5),
         A.Rotate(limit=20, p=0.5),
@@ -78,29 +78,34 @@ def train(args):
     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ToTensorV2()
     ])
-    dataset_train = SimpleOxfordPetDataset(root,"train",train_transform,preprocess=True)
-    dataset_val = SimpleOxfordPetDataset(root,"valid",val_transform,preprocess=True)
+    dataset_train = SimpleOxfordPetDataset(root,"train",train_transform,preprocess=args.data_preprocess)
+    dataset_val = SimpleOxfordPetDataset(root,"valid",val_transform,preprocess=args.data_preprocess)
     dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size=args.batch_size,num_workers=4, shuffle=True,  pin_memory=True,
-    prefetch_factor=2) # 預先讀取資料
+    prefetch_factor=2) # ??????????????????
     dataloader_val   = torch.utils.data.DataLoader(dataset_val,   batch_size=args.batch_size, num_workers=4,shuffle=False ,pin_memory=True,
-    prefetch_factor=2)  # 預先讀取資料
+    prefetch_factor=2)  # ??????????????????
     print(len(dataloader_train))
     print(len(dataloader_val))
     #start Tensorboard Interface
     # Default directory "runs"
     # writer = SummaryWriter() 
 
-    # 步驟2. 模型宣告
-    model = ResNet34_UNet(n_channels=3, n_classes=2).to(device)   
-     #第55行改第87行就要改
+    # ??????2. ????????????
+    if(args.model_type=='UNet'):
+        model = UNet(n_channels=3, n_classes=2).to(device)
+    else:
+        model = ResNet34_UNet(n_channels=3, n_classes=2).to(device)
+
+     #???55?????????87????????????
     # Add on Tensorboard the Model Graph
     # img_reference_dummy = torch.randn(1,3,img_size,img_size)
     # img_test_dummy = torch.randn(1,3,img_size,img_size)
     # writer.add_graph(model,[img_reference_dummy,img_test_dummy])
-    # 步驟3. loss function宣告
+    # ??????3. loss function??????
     #criterion = ComboLoss(0.7).to(device)
-    criterion = ComboLoss(1).to(device)
-    # 步驟4. optimator宣告
+    
+    criterion = torch.nn.CrossEntropyLoss().to(device)
+    # ??????4. optimator??????
     if(args.optimizer=="Adam"):
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-4, lr=args.learning_rate)
     elif(args.optimizer=="AdamW"):
@@ -109,7 +114,7 @@ def train(args):
         optimizer = torch.optim.SGD(model.parameters(), weight_decay=1e-4,lr=args.learning_rate)
 
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
-    # 步驟5. 模型開始訓練
+    # ??????5. ??????????????????
     # https://github.com/TommyHuang821/Pytorch_DL_Implement/blob/main/10_pytorch_SemanticSegmentation_VOC2007.ipynb
     
     log_loss_train=[]
@@ -124,7 +129,7 @@ def train(args):
         log_loss_val.append([epoch,val_loss])
         if val_loss <best_loss :
             best_loss = val_loss
-            torch.save(model.state_dict(),'saved_models/ResNet34_UNet0324_2.pth')#第55行改第87行就要改
+            torch.save(model.state_dict(),os.path.join('saved_models',args.save_pth_filename))#???55?????????87????????????
         
         print('\nlearning rate:{}'.format(scheduler.get_last_lr()[0]))
         print('CNN[epoch: [{}/{}], loss(train):{:.5f}'.format(
@@ -149,11 +154,15 @@ def get_args():
     parser.add_argument('--learning_rate', '-lr', type=float, default=1e-5, help='learning rate')
     parser.add_argument('--optimizer', '-opt', type=str, default="Adam", help='optimizer')
 
+    parser.add_argument('--model_type',  type=str, default='UNet', help='UNet/ResNet34UNet')
+    parser.add_argument('--data_preprocess',  type=bool, default=False, help='data preprocessing')
+    parser.add_argument('--save_fig_filename',  type=str, default='trainval.png', help='saving train val loss fig')
+    parser.add_argument('--save_pth_filename',  type=str, default='MODEL.pth', help='saving pth file name')
     return parser.parse_args()
  
 if __name__ == "__main__":
     args = get_args()
     log_loss_train ,log_loss_val=train(args)
-    utils.draw_loss(log_loss_train,log_loss_val,"train.png")
+    utils.draw_loss(log_loss_train,log_loss_val,args.save_fig_filename)
     
     

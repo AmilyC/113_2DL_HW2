@@ -43,7 +43,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
             print(f"cannot read img files: {filename}, error: {e}")
             with open("skipped_files.txt", "a") as f:
                 f.write(f"{filename}\n")
-            return self.__getitem__((idx + 1) % len(self.filenames))  # 換下一張
+            return self.__getitem__((idx + 1) % len(self.filenames))  # ????????????
           
         mask = self._preprocess_mask(trimap)
 

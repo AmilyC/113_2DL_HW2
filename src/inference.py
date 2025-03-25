@@ -9,7 +9,11 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
 def test_evaluate(args):
-    net = ResNet34_UNet(n_channels=3, n_classes=2).to(device)
+    if(args.model_type=='UNet'):
+        net = UNet(n_channels=3, n_classes=2).to(device)
+    else:
+        net = ResNet34_UNet(n_channels=3, n_classes=2).to(device)
+
     net.load_state_dict(torch.load(args.model))
     
     net.eval()
@@ -18,8 +22,9 @@ def test_evaluate(args):
     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
     ToTensorV2()
     ])
-    dataset_test = SimpleOxfordPetDataset(args.data_path,"test",val_transform,preprocess=True)
+    dataset_test = SimpleOxfordPetDataset(args.data_path,"test",val_transform,preprocess=args.data_preprocess)
     dataloader_test   = torch.utils.data.DataLoader(dataset_test, batch_size=args.batch_size,num_workers=4, shuffle=False)
+    print("dataloader_test")
     print(len(dataloader_test))
     
     images_list = []
@@ -30,7 +35,7 @@ def test_evaluate(args):
         # print(data)
         images =data[1]["image"]
         target = data[1]["mask"]
-        target = target.long()  # 轉成整數類別索引
+        target = target.long()  # ????????????????????????
         # print(target.shape)
         images=images.to(device)
         target = target.to(device).long()
@@ -69,8 +74,8 @@ def test_evaluate(args):
             ax.axis('off')
 
     plt.tight_layout()
-    plt.savefig("segmentation_visualization_1.png")
-    plt.show()
+    plt.savefig(args.save_fig_filename)
+    # plt.show()
     
     
     
@@ -85,13 +90,15 @@ def get_args():
     parser.add_argument('--model', default='MODEL.pth', help='path to the stored model weoght')
     parser.add_argument('--data_path', type=str, help='path to the input data')
     parser.add_argument('--batch_size', '-b', type=int, default=1, help='batch size')
-    
+    parser.add_argument('--model_type',  type=str, default='UNet', help='UNet/ResNet34UNet')
+    parser.add_argument('--data_preprocess',  type=bool, default=False, help='data preprocessing')
+    parser.add_argument('--save_fig_filename',  type=str, default='segmentation_visualization.png', help='saving visualize fig')
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = get_args()
     dice = test_evaluate(args)
-    #  轉成 NumPy
+    #  ?????? NumPy
     numpy_dice = dice.detach().cpu().numpy()
     print("avg_dice_score: ")
     print(numpy_dice)

@@ -11,7 +11,7 @@ class Encoder(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
   
-            nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride =1, padding=1),# stride=1,padding=1大小才不會變
+            nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride =1, padding=1),# stride=1,padding=1??????????????????
             nn.BatchNorm2d(out_channels),
             nn.Dropout2d(0.5),
         )
@@ -27,7 +27,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    """(upsample => convolution => ReLU => [BN] ) * 2"""
+    """(upsample => convolution => ReLU => [BN] => cbam ) * 2"""
     def __init__(self, in_channels,out_channels,stride=1,kernel_size=3,mid_channels=None ):
         super(Decoder,self).__init__()
         if not mid_channels:
@@ -46,7 +46,7 @@ class Decoder(nn.Module):
 
 class ResNet34_UNet(nn.Module):
     def __init__(self, n_channels, n_classes):
-        super(ResNet34_UNet, self).__init__() #是調用父類（nn.Module）的初始化函式，確保我們繼承到的功能都能正常運作。
+        super(ResNet34_UNet, self).__init__() #??????????????????nn.Module???????????????????????????????????????????????????????????????????????????
         self.pooling = nn.MaxPool2d(kernel_size=2)
 
         self.inc = nn.Sequential(
@@ -76,14 +76,14 @@ class ResNet34_UNet(nn.Module):
     
 
     def make_Encoder_layer(self, in_channel, out_channel, block_num, stride=1):
-        # shortcut的部份必須和該block最後一層維度相同，所以這裡做1d conv增加維度 
-        # 並且根據有沒有縮小shape(stride=2)做相同的動作 
+        # shortcut?????????????????????block??????????????????????????????????????????1d conv???????????? 
+        # ???????????????????????????shape(stride=2)?????????????????? 
         shortcut = nn.Sequential( 
             nn.Conv2d(in_channel, out_channel, 1, stride=stride, bias=False), 
             nn.BatchNorm2d(out_channel), 
         ) 
-        layers = [] # 第一次的ResidualBlock可能會縮小shape(根據stride)，所以要獨立出來做 
-        layers.append(Encoder(in_channel, out_channel, stride=stride, shortcut=shortcut)) #注意這邊都是第二次以後的ResidualBlock，所以不會有維度或大小不同的問題，參數跟shortcut都不用做 
+        layers = [] # ????????????ResidualBlock???????????????shape(??????stride)??????????????????????????? 
+        layers.append(Encoder(in_channel, out_channel, stride=stride, shortcut=shortcut)) #????????????????????????????????????ResidualBlock????????????????????????????????????????????????????????????shortcut???????????? 
         for i in range(1, block_num): 
             layers.append(Encoder(out_channel, out_channel)) 
 
@@ -96,57 +96,57 @@ class ResNet34_UNet(nn.Module):
 
     def forward(self,x):
 
-        print(x.shape)
+        # print(x.shape)
         x1 = self.inc(x)#t
-        print(x1.shape)#
+        # print(x1.shape)#
 
         # x2 = self.pooling(x1)
         # print(x2.shape)#
 
         x3 = self.down1(x1)
-        print(x3.shape)#
+        # print(x3.shape)#
 
-        x4 = self.down2(x1)
-        print(x4.shape)#
+        x4 = self.down2(x3)
+        # print(x4.shape)#
 
         x5 = self.down3(x4)
-        print(x5.shape)#
+        # print(x5.shape)#
 
         x6 = self.down4(x5)
-        print(x6.shape)#
+        # print(x6.shape)#
 
         x7 = self.down5(x6)
-        print(x7.shape) #
+        # print(x7.shape) #
 
         x= self.up1(x7)#
-        print(x.shape) 
+        # print(x.shape) 
         x= torch.cat([x6,x],dim=1)
-        print(x.shape)#
+        # print(x.shape)#
 
         x = self.up2(x)
-        print(x.shape)#
+        # print(x.shape)#
 
         x= torch.cat([x5,x],dim=1)
-        print(x.shape)#
+        # print(x.shape)#
 
         x = self.up3(x)
-        print(x.shape)#
+        # print(x.shape)#
         x= torch.cat([x4,x],dim=1)
-        print(x.shape)#
+        # print(x.shape)#
 
         x = self.up4(x)
-        print(x.shape)#
+        # print(x.shape)#
         x = torch.cat([x3,x],dim=1)
-        print(x.shape)#
+        # print(x.shape)#
 
         x = self.up5(x)
-        print(x.shape)#
+        # print(x.shape)#
 
         x = self.up6(x)#
-        print(x.shape)
+        # print(x.shape)
 
         x = self.outc(x)#
-        print(x.shape)
+        # print(x.shape)
         
 
 

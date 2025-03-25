@@ -36,9 +36,6 @@ for file in tqdm(os.listdir(D)) :
        print(f"skip broken images file: {file}")
        continue
        
-      
-    
-    
 
     # **Z-score **
     normalized_image = np.zeros_like(image, dtype=np.float32)

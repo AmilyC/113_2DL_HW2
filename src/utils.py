@@ -9,7 +9,7 @@ def dice_score(pred_mask, gt_mask):
     pred_mask = torch.sigmoid(pred_mask)
     
     pred_mask = (pred_mask > 0.5).long()
-    if pred_mask.shape[1] > 1:  # 確保是 one-hot
+    if pred_mask.shape[1] > 1:  # ????????? one-hot
         pred_mask = torch.argmax(pred_mask, dim=1, keepdim=True)
     
     #print("Pred Mask After Binarization:", pred_mask.unique())
